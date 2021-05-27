@@ -119,6 +119,8 @@
 
 // OpenGL Data
 static char         g_GlslVersionString[32] = "";
+static int          g_GlslVersion = 0;
+static bool         g_GlslES = false;
 static GLuint       g_FontTexture = 0;
 static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
@@ -154,6 +156,11 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     IM_ASSERT((int)strlen(glsl_version) + 2 < IM_ARRAYSIZE(g_GlslVersionString));
     strcpy(g_GlslVersionString, glsl_version);
     strcat(g_GlslVersionString, "\n");
+    sscanf(g_GlslVersionString, "#version %d", &g_GlslVersion);
+    if (g_GlslVersion == 100 ||
+        g_GlslVersion == 300) {
+      g_GlslES = true;
+    }
 
     // Make a dummy GL call (we don't actually need the result)
     // IF YOU GET A CRASH HERE: it probably means that you haven't initialized the OpenGL function loader used by this code.
@@ -188,9 +195,11 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
+    if (!g_GlslES) {
 #ifdef GL_POLYGON_MODE
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 #endif
+    }
 
     // Setup viewport, orthographic projection matrix
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
@@ -359,9 +368,13 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
     if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
     if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+
+    if (!g_GlslES) {
 #ifdef GL_POLYGON_MODE
-    glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
+      glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
 #endif
+    }
+
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 }
